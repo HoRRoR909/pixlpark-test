@@ -8,27 +8,34 @@ function App() {
   const privateKey = '8e49ff607b1f46e1a5e8f6ad5d312a80'
 
   const [orders, setOrders] = useState([])
+  const [requestToken, setRequestToken] = useState('')
+  const [accessToken, setAccessToken] = useState('');
+  const [refreshToken, setRefreshToken] = useState('')
 
-  useEffect(() => {
-    axios.get('http://api.pixlpark.com/oauth/requesttoken')
+ useEffect(() => {
+    axios.get('https://api.pixlpark.com/oauth/requesttoken')
       .then(authToken => {
+        setRequestToken(authToken.data.RequestToken)
         const hash = sha1(authToken.data.RequestToken + privateKey)
-        axios.get(`http://api.pixlpark.com/oauth/accesstoken?oauth_token=${authToken.data.RequestToken}&grant_type=api&username=${publicKey}&password=${hash.toString()}`)
-          .then(AccessToken => {
-            axios.get(`http://api.pixlpark.com/orders?oauth_token=${AccessToken.data.AccessToken}`)
-            .then(orders => {
-              console.log(orders.data.Result);
-              setOrders(orders.data.Result)
-            })
-            .catch(ordersErr => console.log(ordersErr))
+        axios.get(`https://api.pixlpark.com/oauth/accesstoken?oauth_token=${authToken.data.RequestToken}&grant_type=api&username=${publicKey}&password=${hash.toString()}`)
+          .then(res => {
+            setAccessToken(res.data.AccessToken)
+            setRefreshToken(res.data.RefreshToken)
           })
-          .catch(accessErr => console.log(accessErr))
+          .catch(tokensErr => console.log(tokensErr))
       })
       .catch(err => console.log(err))
   }, [])
 
+  const getOrders = () => {
+    axios.get(`https://api.pixlpark.com/orders?oauth_token=${accessToken}`)
+      .then(orders => {setOrders(orders.data.Result)})
+      .catch(ordersErr => console.log(ordersErr))
+  }
+
   return (
     <div className="App">
+      <button onClick={getOrders}>Вывести список заказов</button>
       <ul>
         {orders && orders.map(order => (
           <li key={order.Id}>{order.Title}</li>
